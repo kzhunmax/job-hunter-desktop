@@ -22,17 +22,11 @@ void AuthManager::login(const QString &email, const QString &password) {
             auto doc = QJsonDocument::fromJson(reply->readAll());
             accessToken = doc.object()["data"].toObject()["accessToken"].toString();
             emit loginSuccess();
-            emit authStateChanged(true);
         } else {
             emit loginFailed("Login failed: " + reply->errorString());
         }
         reply->deleteLater();
     });
-}
-
-void AuthManager::logout() {
-    accessToken.clear();
-    emit authStateChanged(false);
 }
 
 bool AuthManager::isAuthenticated() const {

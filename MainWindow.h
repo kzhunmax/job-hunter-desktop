@@ -30,7 +30,7 @@ private:
 
     QNetworkAccessManager *networkAccessManager; // handle HTTP requests from Spring backend
     const QString API_URL = "http://localhost:8080/api/jobs";
-    const QString AUTH_TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJzaWtpdzIzMDY2QG9rY2RlYWxzLmNvbSIsImlhdCI6MTc2NDA5NDA5MSwiZXhwIjoxNzY0MTgwNDkxfQ.FN6uG-mXonOCnGil_eWudvz-oLVnLA-qXoOiyiaOO9M";
+    const QString AUTH_TOKEN;
 
     std::vector<Job> jobsList;
     void updateTable();

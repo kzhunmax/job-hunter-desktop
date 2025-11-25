@@ -51,10 +51,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     connect(loginButton, &QPushButton::clicked, this, &MainWindow::openLogin);
     connect(applyButton, &QPushButton::clicked, this, &MainWindow::applyForJob);
 
-    connect(authManager, &AuthManager::authStateChanged, [this](bool loggedIn) {
-        loginButton->setText(loggedIn ? "Logout" : "Login");
-    });
-
     // Load on startup
     loadJobs();
 }
@@ -145,9 +141,7 @@ void MainWindow::deleteSelectedJobs() {
 }
 
 void MainWindow::openLogin() {
-    if (authManager->isAuthenticated()) {
-        authManager->logout();
-    } else {
+    if (!authManager->isAuthenticated()) {
         LoginDialog dialog(authManager, this);
         dialog.exec();
     }
