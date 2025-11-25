@@ -9,6 +9,12 @@ set(CMAKE_AUTOUIC ON)
 
 find_package(Qt6 COMPONENTS Widgets Network REQUIRED)
 
-add_executable(qt main.cpp)
+add_executable(qt
+        main.cpp
+        Job.h
+        Job.cpp
+        MainWindow.h
+        MainWindow.cpp
+)
 target_link_libraries(qt PRIVATE Qt6::Widgets Qt6::Network)
 

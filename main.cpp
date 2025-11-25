@@ -1,10 +1,17 @@
 #include <QApplication>
-#include <QPushButton>
+#include "MainWindow.h"
+#include <QMessageBox>
 
 int main(int argc, char *argv[]) {
-    QApplication a(argc, argv);
-    QPushButton button("Hello world!", nullptr);
-    button.resize(200, 100);
-    button.show();
-    return QApplication::exec();
+
+    // Initialize QT Application, handles system events
+    QApplication app(argc, argv);
+
+    // Create Main window
+    MainWindow mainWindow;
+    mainWindow.setWindowTitle("JobHunter");
+    mainWindow.resize(800, 600);
+    mainWindow.show();
+
+    return app.exec();
 }
