@@ -7,12 +7,25 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QMessageBox>
+#include  <QLabel>
+
+#include "LoginDialog.h"
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
+    authManager = new AuthManager(this);
+
     // Setup UI
     const auto centalWidget = new QWidget(this);
     setCentralWidget(centalWidget);
     const auto layout = new QVBoxLayout(centalWidget);
+
+    // Top Bar for login
+    auto *topBar = new QWidget;
+    auto *topLayout = new QHBoxLayout(topBar);
+    loginButton = new QPushButton("Login", this);
+    topLayout->addWidget(new QLabel("JobHunter"));
+    topLayout->addStretch();
+    topLayout->addWidget(loginButton);
 
     // Setup Tables
     tableWidget = new QTableWidget(this);
@@ -24,6 +37,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     // Buttons
     refreshButton = new QPushButton("Refresh", this);
     deleteButton = new QPushButton("Delete", this);
+    applyButton = new QPushButton("Apply", this);
+    layout->addWidget(applyButton);
     layout->addWidget(refreshButton);
     layout->addWidget(deleteButton);
 
@@ -33,17 +48,23 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     // Connect Buttons to functions
     connect(refreshButton, &QPushButton::clicked, this, &MainWindow::loadJobs);
     connect(deleteButton, &QPushButton::clicked, this, &MainWindow::deleteSelectedJobs);
+    connect(loginButton, &QPushButton::clicked, this, &MainWindow::openLogin);
+    connect(applyButton, &QPushButton::clicked, this, &MainWindow::applyForJob);
+
+    connect(authManager, &AuthManager::authStateChanged, [this](bool loggedIn) {
+        loginButton->setText(loggedIn ? "Logout" : "Login");
+    });
 
     // Load on startup
     loadJobs();
 }
 
-MainWindow::~MainWindow() {}
+MainWindow::~MainWindow() {
+}
 
 void MainWindow::loadJobs() {
     // Create Request
     QNetworkRequest request(API_URL);
-    request.setRawHeader("Authorization", ("Bearer " + AUTH_TOKEN).toUtf8());
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
     // Send GET request
@@ -61,10 +82,10 @@ void MainWindow::loadJobs() {
             QJsonArray jsonJobs = obj["data"].toObject()["content"].toArray();
             jobsList.clear();
 
-            for (const auto &item : jsonJobs) {
+            for (const auto &item: jsonJobs) {
                 QJsonObject jsonObj = item.toObject();
 
-                Job job (
+                Job job(
                     static_cast<long>(jsonObj["id"].toDouble()),
                     jsonObj["title"].toString(),
                     jsonObj["company"].toString(),
@@ -84,7 +105,7 @@ void MainWindow::loadJobs() {
 void MainWindow::updateTable() {
     tableWidget->setRowCount(0);
 
-    for (const Job &job : jobsList) {
+    for (const Job &job: jobsList) {
         int row = tableWidget->rowCount();
         tableWidget->insertRow(row);
 
@@ -121,4 +142,47 @@ void MainWindow::deleteSelectedJobs() {
         }
         reply->deleteLater();
     });
+}
+
+void MainWindow::openLogin() {
+    if (authManager->isAuthenticated()) {
+        authManager->logout();
+    } else {
+        LoginDialog dialog(authManager, this);
+        dialog.exec();
+    }
+}
+
+void MainWindow::applyForJob() {
+    int row = tableWidget->currentRow();
+    if (row < 0) {
+        QMessageBox::warning(this, "Info", "Select job to apply");
+        return;
+    }
+    if (!authManager->isAuthenticated()) {
+        int res = QMessageBox::question(this, "Login Required",
+                                        "You must be logged in to apply. Do you want to login now?");
+
+        if (res == QMessageBox::Yes) {
+            LoginDialog dialog(authManager, this);
+            if (dialog.exec() == QDialog::Accepted) {
+                QMessageBox::information(this, "Success", "Logged in! Click Apply again.");
+            }
+        }
+        return;
+    }
+
+    Job selectedJob = jobsList[row];
+
+    // Create the request to /api/applications/apply/{jobId}
+    QString applyUrl = QString("http://localhost:8080/api/applications/apply/%1").arg(selectedJob.getId());
+    QNetworkRequest request(applyUrl);
+
+    // NOW we add the token
+    request.setRawHeader("Authorization", ("Bearer " + authManager->getToken()).toUtf8());
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+
+    QJsonObject body;
+    body["resumeId"] = 1; // TODO: You need to fetch user's resume ID first!
+    body["coverLetter"] = "I am interested in this job.";
 }

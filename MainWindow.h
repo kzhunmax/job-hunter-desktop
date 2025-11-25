@@ -6,6 +6,8 @@
 #include <QPushButton>
 #include <QNetworkAccessManager>
 #include <vector>
+
+#include "AuthManager.h"
 #include "Job.h"
 
 class MainWindow : public QMainWindow {
@@ -16,10 +18,15 @@ public:
 private slots:
     void loadJobs(); // trigger by Refresh button
     void deleteSelectedJobs(); // trigger by Delete button
+    void openLogin();
+    void applyForJob();
 private:
     QTableWidget *tableWidget;
     QPushButton *refreshButton;
     QPushButton *deleteButton;
+    AuthManager *authManager;
+    QPushButton *loginButton;
+    QPushButton *applyButton;
 
     QNetworkAccessManager *networkAccessManager; // handle HTTP requests from Spring backend
     const QString API_URL = "http://localhost:8080/api/jobs";

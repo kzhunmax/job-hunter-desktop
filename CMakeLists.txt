@@ -15,6 +15,10 @@ add_executable(qt
         Job.cpp
         MainWindow.h
         MainWindow.cpp
+        AuthManager.cpp
+        AuthManager.h
+        LoginDialog.cpp
+        LoginDialog.h
 )
 target_link_libraries(qt PRIVATE Qt6::Widgets Qt6::Network)
 
