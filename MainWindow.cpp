@@ -24,8 +24,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     auto *topLayout = new QHBoxLayout(topBar);
     loginButton = new QPushButton("Login", this);
     topLayout->addWidget(new QLabel("JobHunter"));
-    topLayout->addStretch();
     topLayout->addWidget(loginButton);
+    topLayout->addStretch();
 
     // Setup Tables
     tableWidget = new QTableWidget(this);

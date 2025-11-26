@@ -2,6 +2,8 @@
 #define LOGINDIALOG_H
 
 #include <QDialog>
+#include <QComboBox>
+#include <QTabWidget>
 #include "AuthManager.h"
 #include "MainWindow.h"
 
@@ -11,10 +13,23 @@ class LoginDialog : public QDialog {
 public:
     explicit LoginDialog(AuthManager *auth, QWidget *parent = nullptr);
 private:
-    QLineEdit *emailInput;
-    QLineEdit *passwordInput;
+    QTabWidget *tabWidget;
+
+    // Login Widgets
+    QLineEdit *loginEmail;
+    QLineEdit *loginPassword;
     QPushButton *loginButton;
+
+    // Register Widgets
+    QLineEdit *regEmail;
+    QLineEdit *regPassword;
+    QLineEdit *regConfirm;
+    QComboBox *roleCombo;
+
     AuthManager *authManager;
+
+    QWidget* createLoginTab();
+    QWidget* createRegisterTab();
 };
 
 

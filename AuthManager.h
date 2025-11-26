@@ -11,13 +11,17 @@ public:
     void login(const QString &email, const QString &password);
     QString getToken() const;
     bool isAuthenticated() const;
+    void registerUser(const QString &email, const QString &password, const QString &confirmPassword, const QString &role);
 signals:
     void loginSuccess();
     void loginFailed(QString message);
+    void registrationSuccess();
+    void registrationFailed(QString message);
 private:
     QNetworkAccessManager *networkManager;
     QString accessToken;
     const QString LOGIN_URL = "http://localhost:8080/api/auth/login";
+    const QString REGISTER_URL = "http://localhost:8080/api/auth/register";
 };
 
 

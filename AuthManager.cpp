@@ -2,6 +2,7 @@
 
 #include <QJsonObject>
 #include <QNetworkReply>
+#include <QJsonArray>
 
 AuthManager::AuthManager(QObject *parent) : QObject(parent) {
     networkManager = new QNetworkAccessManager(this);
@@ -35,4 +36,26 @@ bool AuthManager::isAuthenticated() const {
 
 QString AuthManager::getToken() const {
     return accessToken;
+}
+
+void AuthManager::registerUser(const QString &email, const QString &password, const QString &confirmPassword, const QString &role) {
+    QNetworkRequest request(REGISTER_URL);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+
+    QJsonObject json;
+    json["email"] = email;
+    json["password"] = password;
+    json["confirmPassword"] = confirmPassword;
+    json["roles"] = QJsonArray({role});
+
+    QNetworkReply *reply = networkManager->post(request, QJsonDocument(json).toJson());
+
+    connect(reply, &QNetworkReply::finished, [this, reply] {
+        if (reply->error() == QNetworkReply::NoError) {
+            emit registrationSuccess();
+        } else {
+            emit registrationFailed("Registration failed: " + reply->errorString());
+        }
+        reply->deleteLater();
+    });
 }

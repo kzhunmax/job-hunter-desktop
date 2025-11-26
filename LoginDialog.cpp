@@ -6,25 +6,37 @@
 #include <QLineEdit>
 
 LoginDialog::LoginDialog(AuthManager *auth, QWidget *parent) : QDialog(parent), authManager(auth) {
-    setWindowTitle("Login Required");
+    setWindowTitle("Welcome to JobHunter");
+    setMinimumWidth(300);
+
     auto layout = new QVBoxLayout(this);
+    tabWidget = new QTabWidget(this);
 
-    layout->addWidget(new QLabel("Email:"));
-    emailInput = new QLineEdit(this);
-    layout->addWidget(emailInput);
+    tabWidget->addTab(createLoginTab(), "Login");
+    tabWidget->addTab(createRegisterTab(), "Register");
+    layout->addWidget(tabWidget);
+}
 
-    layout->addWidget(new QLabel("Password:"));
-    passwordInput = new QLineEdit(this);
-    passwordInput->setEchoMode(QLineEdit::Password);
-    layout->addWidget(passwordInput);
+QWidget* LoginDialog::createLoginTab() {
+    QWidget* tab = new QWidget;
+    auto *layout = new QVBoxLayout(tab);
 
-    loginButton = new QPushButton("Login", this);
+
+    loginEmail = new QLineEdit; loginEmail->setPlaceholderText("Email");
+    loginPassword = new QLineEdit; loginPassword->setPlaceholderText("Password"); loginPassword->setEchoMode(QLineEdit::Password);
+
+    loginButton = new QPushButton("Login");
+
+    layout->addWidget(new QLabel("Sign in with your account"));
+    layout->addWidget(loginEmail);
+    layout->addWidget(loginPassword);
     layout->addWidget(loginButton);
+    layout->addStretch();
 
     // Logic
     connect(loginButton, &QPushButton::clicked, [this]() {
         loginButton->setEnabled(false);
-        authManager->login(emailInput->text(), passwordInput->text());
+        authManager->login(loginEmail->text(), loginPassword->text());
     });
 
     // Close dialog on success
@@ -34,4 +46,35 @@ LoginDialog::LoginDialog(AuthManager *auth, QWidget *parent) : QDialog(parent), 
     connect(authManager, &AuthManager::loginFailed, [this](QString message) {
         loginButton->setEnabled(true);
     });
+    return tab;
+}
+
+QWidget* LoginDialog::createRegisterTab() {
+    QWidget *tab = new QWidget;
+    auto *layout = new QVBoxLayout(tab);
+
+    regEmail = new QLineEdit; regEmail->setPlaceholderText("Email");
+    regPassword = new QLineEdit; regPassword->setPlaceholderText("Password"); regPassword->setEchoMode(QLineEdit::Password);
+    regConfirm = new QLineEdit; regConfirm->setPlaceholderText("Confirm Password"); regConfirm->setEchoMode(QLineEdit::Password);
+
+    roleCombo = new QComboBox;
+    roleCombo->addItem("I am a Candidate", "ROLE_CANDIDATE");
+    roleCombo->addItem("I am a Recruiter", "ROLE_RECRUITER");
+
+    QPushButton *registerButton = new QPushButton("Create Account");
+
+    layout->addWidget(new QLabel("Join us today!"));
+    layout->addWidget(regEmail);
+    layout->addWidget(regPassword);
+    layout->addWidget(regConfirm);
+    layout->addWidget(new QLabel("Select Role:"));
+    layout->addWidget(roleCombo);
+    layout->addWidget(registerButton);
+    layout->addStretch();
+
+    connect(registerButton, &QPushButton::clicked, [this]() {
+        QString role = roleCombo->currentData().toString();
+        authManager->registerUser(regEmail->text(), regPassword->text(), regConfirm->text(), role);
+    });
+    return tab;
 }
