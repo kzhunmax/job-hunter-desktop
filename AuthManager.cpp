@@ -59,3 +59,20 @@ void AuthManager::registerUser(const QString &email, const QString &password, co
         reply->deleteLater();
     });
 }
+
+void AuthManager::switchRole() {
+    QNetworkRequest request(SWITCH_ROLE_URL);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    request.setRawHeader("Authorization", ("Bearer " + accessToken).toUtf8());
+
+    QNetworkReply *reply = networkManager->post(request, QByteArray()); // Empty body
+
+    connect(reply, &QNetworkReply::finished, [this, reply]() {
+        if (reply->error() == QNetworkReply::NoError) {
+            auto doc = QJsonDocument::fromJson(reply->readAll());
+            accessToken = doc.object()["data"].toObject()["accessToken"].toString();
+            emit roleSwitched();
+        }
+        reply->deleteLater();
+    });
+}

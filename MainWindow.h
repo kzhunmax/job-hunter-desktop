@@ -4,7 +4,6 @@
 #include <QMainWindow>
 #include <QTableWidget>
 #include <QPushButton>
-#include <QNetworkAccessManager>
 #include <vector>
 
 #include "AuthManager.h"

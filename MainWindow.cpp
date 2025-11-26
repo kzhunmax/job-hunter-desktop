@@ -22,8 +22,13 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     // Top Bar for login
     auto *topBar = new QWidget;
     auto *topLayout = new QHBoxLayout(topBar);
+    layout->addWidget(topBar);
+
     loginButton = new QPushButton("Login", this);
+    const auto switchRoleButton = new QPushButton("Switch Role");
+    switchRoleButton->setVisible(false);
     topLayout->addWidget(new QLabel("JobHunter"));
+    topLayout->addWidget(switchRoleButton);
     topLayout->addWidget(loginButton);
     topLayout->addStretch();
 
@@ -50,9 +55,21 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     connect(deleteButton, &QPushButton::clicked, this, &MainWindow::deleteSelectedJobs);
     connect(loginButton, &QPushButton::clicked, this, &MainWindow::openLogin);
     connect(applyButton, &QPushButton::clicked, this, &MainWindow::applyForJob);
+    connect(switchRoleButton, &QPushButton::clicked, authManager, &AuthManager::switchRole);
 
     // Load on startup
     loadJobs();
+
+    connect(authManager, &AuthManager::loginSuccess, [this, switchRoleButton]() {
+        loginButton->hide();
+        switchRoleButton->show();
+        loadJobs();
+    });
+
+    connect(authManager, &AuthManager::roleSwitched, [this]() {
+        QMessageBox::information(this, "Success", "Role Switched!");
+        loadJobs();
+    });
 }
 
 MainWindow::~MainWindow() {
