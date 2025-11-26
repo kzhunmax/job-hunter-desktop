@@ -13,6 +13,7 @@ public:
     bool isAuthenticated() const;
     void registerUser(const QString &email, const QString &password, const QString &confirmPassword, const QString &role);
     void switchRole();
+    long getResumeId() const;
 signals:
     void loginSuccess();
     void loginFailed(QString message);
@@ -22,9 +23,10 @@ signals:
 private:
     QNetworkAccessManager *networkManager;
     QString accessToken;
-    const QString LOGIN_URL = "http://localhost:8080/api/auth/login";
-    const QString REGISTER_URL = "http://localhost:8080/api/auth/register";
-    const QString SWITCH_ROLE_URL = "http://localhost:8080/api/auth/switch-role";
+    long resumeId = -1;
+    const QString BASE_URL = "http://localhost:8080/api";
+
+    void fetchUserProfile();
 };
 
 

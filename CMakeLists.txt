@@ -19,6 +19,8 @@ add_executable(qt
         AuthManager.h
         LoginDialog.cpp
         LoginDialog.h
+        JobCard.cpp
+        JobCard.h
 )
 target_link_libraries(qt PRIVATE Qt6::Widgets Qt6::Network)
 

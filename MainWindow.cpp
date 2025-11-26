@@ -1,79 +1,90 @@
 #include "MainWindow.h"
 #include <QVBoxLayout>
 #include <QWidget>
-#include <QHeaderView>
 #include <QNetworkRequest>
 #include <QNetworkReply>
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QMessageBox>
-#include  <QLabel>
+#include <QLabel>
 
+#include "JobCard.h"
 #include "LoginDialog.h"
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     authManager = new AuthManager(this);
-
-    // Setup UI
-    const auto centalWidget = new QWidget(this);
-    setCentralWidget(centalWidget);
-    const auto layout = new QVBoxLayout(centalWidget);
-
-    // Top Bar for login
-    auto *topBar = new QWidget;
-    auto *topLayout = new QHBoxLayout(topBar);
-    layout->addWidget(topBar);
-
-    loginButton = new QPushButton("Login", this);
-    const auto switchRoleButton = new QPushButton("Switch Role");
-    switchRoleButton->setVisible(false);
-    topLayout->addWidget(new QLabel("JobHunter"));
-    topLayout->addWidget(switchRoleButton);
-    topLayout->addWidget(loginButton);
-    topLayout->addStretch();
-
-    // Setup Tables
-    tableWidget = new QTableWidget(this);
-    tableWidget->setColumnCount(4); // ID, Title, Company, Salary
-    tableWidget->setHorizontalHeaderLabels({"ID", "Title", "Company", "Salary"});
-    tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-    layout->addWidget(tableWidget);
-
-    // Buttons
-    refreshButton = new QPushButton("Refresh", this);
-    deleteButton = new QPushButton("Delete", this);
-    applyButton = new QPushButton("Apply", this);
-    layout->addWidget(applyButton);
-    layout->addWidget(refreshButton);
-    layout->addWidget(deleteButton);
-
-    // Network Setup
     networkAccessManager = new QNetworkAccessManager(this);
 
-    // Connect Buttons to functions
+    // 1. Central Widget & Main Layout
+    const auto centralWidget = new QWidget(this);
+    centralWidget->setStyleSheet("background-color: #f4f7f6;");
+    setCentralWidget(centralWidget);
+    const auto layout = new QVBoxLayout(centralWidget);
+
+    // 2. Top Bar
+    auto *topBar = new QWidget;
+    topBar->setStyleSheet("background-color: white; border-bottom: 1px solid #ddd;");
+    topBar->setFixedHeight(60);
+    auto *topLayout = new QHBoxLayout(topBar);
+
+    auto *logo = new QLabel("JobHunter");
+    logo->setStyleSheet("font-size: 20px; font-weight: bold; color: #333; margin-left: 10px;");
+
+    refreshButton = new QPushButton("↻ Refresh");
+    refreshButton->setCursor(Qt::PointingHandCursor);
+
+    switchRoleButton = new QPushButton("Switch Role");
+    switchRoleButton->setVisible(false); // Hidden by default
+
+    loginButton = new QPushButton("Login");
+    loginButton->setStyleSheet("background-color: #007bff; color: white; border-radius: 5px; padding: 5px 15px;");
+
+    topLayout->addWidget(logo);
+    topLayout->addWidget(refreshButton);
+    topLayout->addStretch();
+    topLayout->addWidget(switchRoleButton);
+    topLayout->addWidget(loginButton);
+
+    layout->addWidget(topBar);
+
+    // 3. Scroll Area for Cards
+    scrollArea = new QScrollArea(this);
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setFrameShape(QFrame::NoFrame);
+    scrollArea->setStyleSheet("QScrollArea { border: none; background-color: transparent; }");
+
+    cardsContainer = new QWidget;
+    cardsContainer->setStyleSheet("background-color: transparent;");
+    cardsLayout = new QVBoxLayout(cardsContainer);
+    cardsLayout->setAlignment(Qt::AlignTop); // Stack cards from top
+    cardsLayout->setSpacing(15);
+    cardsLayout->setContentsMargins(20, 10, 20, 10);
+
+    scrollArea->setWidget(cardsContainer);
+    layout->addWidget(scrollArea);
+
+    // 4. Connections
     connect(refreshButton, &QPushButton::clicked, this, &MainWindow::loadJobs);
-    connect(deleteButton, &QPushButton::clicked, this, &MainWindow::deleteSelectedJobs);
     connect(loginButton, &QPushButton::clicked, this, &MainWindow::openLogin);
-    connect(applyButton, &QPushButton::clicked, this, &MainWindow::applyForJob);
-    connect(switchRoleButton, &QPushButton::clicked, authManager, &AuthManager::switchRole);
+    connect(switchRoleButton, &QPushButton::clicked, this, &MainWindow::switchRole);
 
-    // Load on startup
-    loadJobs();
-
-    connect(authManager, &AuthManager::loginSuccess, [this, switchRoleButton]() {
+    connect(authManager, &AuthManager::loginSuccess, [this]() {
         loginButton->hide();
         switchRoleButton->show();
-        loadJobs();
+        loadJobs(); // Reload to update card buttons
+        QMessageBox::information(this, "Login", "Welcome back!");
     });
 
     connect(authManager, &AuthManager::roleSwitched, [this]() {
         QMessageBox::information(this, "Success", "Role Switched!");
         loadJobs();
     });
+
+    // Initial Load
+    loadJobs();
 }
 
-MainWindow::~MainWindow() {
-}
+MainWindow::~MainWindow() = default;
 
 void MainWindow::loadJobs() {
     // Create Request
@@ -107,7 +118,7 @@ void MainWindow::loadJobs() {
                 jobsList.push_back(job);
             }
 
-            updateTable();
+            renderJobs();
         } else {
             QMessageBox::critical(this, "Error", "Failed to load jobs: " + reply->errorString(), QMessageBox::Ok);
         }
@@ -115,46 +126,31 @@ void MainWindow::loadJobs() {
     });
 }
 
-void MainWindow::updateTable() {
-    tableWidget->setRowCount(0);
+void MainWindow::renderJobs() {
+    // Clear existing cards
+    QLayoutItem *item;
+    while ((item = cardsLayout->takeAt(0)) != nullptr) {
+        if (item->widget()) delete item->widget();
+        delete item;
+    }
 
-    for (const Job &job: jobsList) {
-        int row = tableWidget->rowCount();
-        tableWidget->insertRow(row);
+    // TODO: Get real role from AuthManager later. For now, toggle logic or default false.
+    bool isRecruiter = false;
 
-        // Set text for each sell
-        tableWidget->setItem(row, 0, new QTableWidgetItem(QString::number(job.getId())));
-        tableWidget->setItem(row, 1, new QTableWidgetItem(job.getTitle()));
-        tableWidget->setItem(row, 2, new QTableWidgetItem(job.getCompanyName()));
-        tableWidget->setItem(row, 3, new QTableWidgetItem(job.getSalaryString()));
+    for (const Job &job : jobsList) {
+        auto *card = new JobCard(job, isRecruiter, this);
+
+        // Connect card signals to MainWindow slots
+        connect(card, &JobCard::applyClicked, this, &MainWindow::onCardApplyClicked);
+        connect(card, &JobCard::deleteClicked, this, &MainWindow::onCardDeleteClicked);
+
+        cardsLayout->addWidget(card);
     }
 }
 
-void MainWindow::deleteSelectedJobs() {
-    // Check if row is selected
-    int currentRow = tableWidget->currentRow();
-    if (currentRow < 0) {
-        QMessageBox::warning(this, "Warning", "Select job to delete");
-        return;
-    }
-
-    // Get ID from C++ List
-    long jobId = jobsList[currentRow].getId();
-    QString deleteUrl = API_URL + "/" + QString::number(jobId);
-    QNetworkRequest request{QUrl(deleteUrl)};
-    request.setRawHeader("Authorization", ("Bearer " + AUTH_TOKEN).toUtf8());
-
-    QNetworkReply *reply = networkAccessManager->deleteResource(request);
-
-    connect(reply, &QNetworkReply::finished, [this, reply]() {
-        if (reply->error() == QNetworkReply::NoError) {
-            QMessageBox::information(this, "Success", "Job deleted!");
-            loadJobs(); // Reload list
-        } else {
-            QMessageBox::critical(this, "Error", "Failed to delete" + reply->errorString());
-        }
-        reply->deleteLater();
-    });
+void MainWindow::onCardDeleteClicked(long jobId) {
+    // Implement delete logic similar to apply but using DELETE verb
+    QMessageBox::information(this, "TODO", "Delete implementation coming in next step");
 }
 
 void MainWindow::openLogin() {
@@ -164,36 +160,43 @@ void MainWindow::openLogin() {
     }
 }
 
-void MainWindow::applyForJob() {
-    int row = tableWidget->currentRow();
-    if (row < 0) {
-        QMessageBox::warning(this, "Info", "Select job to apply");
-        return;
-    }
+void MainWindow::onCardApplyClicked(long jobId) {
     if (!authManager->isAuthenticated()) {
-        int res = QMessageBox::question(this, "Login Required",
-                                        "You must be logged in to apply. Do you want to login now?");
-
-        if (res == QMessageBox::Yes) {
-            LoginDialog dialog(authManager, this);
-            if (dialog.exec() == QDialog::Accepted) {
-                QMessageBox::information(this, "Success", "Logged in! Click Apply again.");
-            }
-        }
+        QMessageBox::information(this, "Login Required", "Please login to apply.");
+        openLogin();
         return;
     }
 
-    Job selectedJob = jobsList[row];
+    long resumeId = authManager->getResumeId();
+    if (resumeId == -1) {
+        QMessageBox::warning(this, "Profile Incomplete", "We could not find a resume in your profile. Please upload one via the website.");
+        return;
+    }
 
-    // Create the request to /api/applications/apply/{jobId}
-    QString applyUrl = QString("http://localhost:8080/api/applications/apply/%1").arg(selectedJob.getId());
+    // Prepare Request
+    QString applyUrl = QString("%1/apply/%2").arg(APPLICATION_URL).arg(jobId);
     QNetworkRequest request(applyUrl);
-
-    // NOW we add the token
-    request.setRawHeader("Authorization", ("Bearer " + authManager->getToken()).toUtf8());
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    request.setRawHeader("Authorization", ("Bearer " + authManager->getToken()).toUtf8());
 
+    // Dynamic Body
     QJsonObject body;
-    body["resumeId"] = 1; // TODO: You need to fetch user's resume ID first!
-    body["coverLetter"] = "I am interested in this job.";
+    body["resumeId"] = static_cast<qint64>(resumeId);
+    body["coverLetter"] = "Applied via Desktop App"; // You could add an input dialog for this
+
+    QNetworkReply *reply = networkAccessManager->post(request, QJsonDocument(body).toJson());
+
+    connect(reply, &QNetworkReply::finished, [this, reply]() {
+        if (reply->error() == QNetworkReply::NoError) {
+            QMessageBox::information(this, "Success", "Application submitted successfully!");
+        } else {
+            // Basic error handling for now
+            QMessageBox::warning(this, "Failed", "Could not apply: " + reply->errorString());
+        }
+        reply->deleteLater();
+    });
+}
+
+void MainWindow::switchRole() {
+    authManager->switchRole();
 }

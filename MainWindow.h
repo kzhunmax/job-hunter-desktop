@@ -2,10 +2,10 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include <QTableWidget>
 #include <QPushButton>
+#include <QVBoxLayout>
+#include <QScrollArea>
 #include <vector>
-
 #include "AuthManager.h"
 #include "Job.h"
 
@@ -16,23 +16,27 @@ public:
     ~MainWindow(); // destructor
 private slots:
     void loadJobs(); // trigger by Refresh button
-    void deleteSelectedJobs(); // trigger by Delete button
     void openLogin();
-    void applyForJob();
+    void switchRole();
+    void onCardApplyClicked(long jobId);
+    void onCardDeleteClicked(long jobId);
 private:
-    QTableWidget *tableWidget;
+    QScrollArea *scrollArea;
+    QWidget *cardsContainer;
+    QVBoxLayout *cardsLayout;
     QPushButton *refreshButton;
     QPushButton *deleteButton;
-    AuthManager *authManager;
     QPushButton *loginButton;
     QPushButton *applyButton;
+    QPushButton *switchRoleButton;
 
+    AuthManager *authManager;
     QNetworkAccessManager *networkAccessManager; // handle HTTP requests from Spring backend
     const QString API_URL = "http://localhost:8080/api/jobs";
-    const QString AUTH_TOKEN;
+    const QString APPLICATION_URL = "http://localhost:8080/api/applications";
 
     std::vector<Job> jobsList;
-    void updateTable();
+    void renderJobs();
 };
 
 #endif //MAINWINDOW_H
