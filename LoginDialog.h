@@ -12,6 +12,7 @@ class LoginDialog : public QDialog {
     Q_OBJECT;
 public:
     explicit LoginDialog(AuthManager *auth, QWidget *parent = nullptr);
+    void updateTheme(bool isDark);
 private:
     QTabWidget *tabWidget;
 

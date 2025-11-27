@@ -5,6 +5,7 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QScrollArea>
+#include <QLabel>
 #include <vector>
 #include "AuthManager.h"
 #include "Job.h"
@@ -18,17 +19,21 @@ private slots:
     void loadJobs(); // trigger by Refresh button
     void openLogin();
     void switchRole();
+    void toggleTheme();
     void onCardApplyClicked(long jobId);
     void onCardDeleteClicked(long jobId);
 private:
     QScrollArea *scrollArea;
+    QWidget *centralWidget;
     QWidget *cardsContainer;
     QVBoxLayout *cardsLayout;
+    QWidget *topBar;
+    QLabel *logoLabel;
+
     QPushButton *refreshButton;
-    QPushButton *deleteButton;
     QPushButton *loginButton;
-    QPushButton *applyButton;
     QPushButton *switchRoleButton;
+    QPushButton *themeButton;
 
     AuthManager *authManager;
     QNetworkAccessManager *networkAccessManager; // handle HTTP requests from Spring backend
@@ -36,7 +41,10 @@ private:
     const QString APPLICATION_URL = "http://localhost:8080/api/applications";
 
     std::vector<Job> jobsList;
+    bool isDarkMode = false;
+
     void renderJobs();
+    void applyGlobalTheme();
 };
 
 #endif //MAINWINDOW_H

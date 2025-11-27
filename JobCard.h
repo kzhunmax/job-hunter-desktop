@@ -8,6 +8,7 @@ class JobCard : public QWidget {
 public:
     explicit JobCard(const Job &job, bool isRecruiter, QWidget *parent = nullptr);
     long getJobId() const { return jobData.getId(); }
+    void applyTheme(bool isDark);
 
 signals:
     void applyClicked(long jobId);
@@ -15,6 +16,7 @@ signals:
 
 private:
     Job jobData;
+    bool m_isRecruiter;
 };
 
 

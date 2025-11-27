@@ -16,63 +16,72 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     networkAccessManager = new QNetworkAccessManager(this);
 
     // 1. Central Widget & Main Layout
-    const auto centralWidget = new QWidget(this);
-    centralWidget->setStyleSheet("background-color: #f4f7f6;");
+    centralWidget = new QWidget(this);
     setCentralWidget(centralWidget);
-    const auto layout = new QVBoxLayout(centralWidget);
+    auto *mainLayout = new QVBoxLayout(centralWidget);
+    mainLayout->setContentsMargins(0, 0, 0, 0);
 
     // 2. Top Bar
-    auto *topBar = new QWidget;
-    topBar->setStyleSheet("background-color: white; border-bottom: 1px solid #ddd;");
-    topBar->setFixedHeight(60);
+    topBar = new QWidget;
+    topBar->setFixedHeight(70);
     auto *topLayout = new QHBoxLayout(topBar);
+    topLayout->setContentsMargins(20, 0, 20, 0);
+    topLayout->setSpacing(15);
 
-    auto *logo = new QLabel("JobHunter");
-    logo->setStyleSheet("font-size: 20px; font-weight: bold; color: #333; margin-left: 10px;");
-
-    refreshButton = new QPushButton("↻ Refresh");
+    refreshButton = new QPushButton("↻");
     refreshButton->setCursor(Qt::PointingHandCursor);
+    refreshButton->setFixedSize(40, 40);
+
+    logoLabel = new QLabel("JobHunter");
 
     switchRoleButton = new QPushButton("Switch Role");
-    switchRoleButton->setVisible(false); // Hidden by default
+    switchRoleButton->setCursor(Qt::PointingHandCursor);
+    switchRoleButton->setFixedHeight(38);
+    switchRoleButton->setVisible(false);
+
+    themeButton = new QPushButton("🌙");
+    themeButton->setCursor(Qt::PointingHandCursor);
+    themeButton->setFixedSize(40, 40);
+    themeButton->setToolTip("Toggle Theme");
 
     loginButton = new QPushButton("Login");
-    loginButton->setStyleSheet("background-color: #007bff; color: white; border-radius: 5px; padding: 5px 15px;");
+    loginButton->setCursor(Qt::PointingHandCursor);
+    loginButton->setFixedSize(100, 38);
 
-    topLayout->addWidget(logo);
     topLayout->addWidget(refreshButton);
+    topLayout->addWidget(logoLabel);
     topLayout->addStretch();
     topLayout->addWidget(switchRoleButton);
+    topLayout->addWidget(themeButton);
     topLayout->addWidget(loginButton);
 
-    layout->addWidget(topBar);
+    mainLayout->addWidget(topBar);
 
     // 3. Scroll Area for Cards
     scrollArea = new QScrollArea(this);
     scrollArea->setWidgetResizable(true);
     scrollArea->setFrameShape(QFrame::NoFrame);
-    scrollArea->setStyleSheet("QScrollArea { border: none; background-color: transparent; }");
 
     cardsContainer = new QWidget;
-    cardsContainer->setStyleSheet("background-color: transparent;");
     cardsLayout = new QVBoxLayout(cardsContainer);
-    cardsLayout->setAlignment(Qt::AlignTop); // Stack cards from top
-    cardsLayout->setSpacing(15);
-    cardsLayout->setContentsMargins(20, 10, 20, 10);
+    cardsLayout->setAlignment(Qt::AlignTop);
+    cardsLayout->setSpacing(20);
+    cardsLayout->setContentsMargins(30, 30, 30, 30);
 
     scrollArea->setWidget(cardsContainer);
-    layout->addWidget(scrollArea);
+    mainLayout->addWidget(scrollArea);
 
     // 4. Connections
     connect(refreshButton, &QPushButton::clicked, this, &MainWindow::loadJobs);
     connect(loginButton, &QPushButton::clicked, this, &MainWindow::openLogin);
     connect(switchRoleButton, &QPushButton::clicked, this, &MainWindow::switchRole);
+    connect(themeButton, &QPushButton::clicked, this, &MainWindow::toggleTheme);
 
     connect(authManager, &AuthManager::loginSuccess, [this]() {
         loginButton->hide();
         switchRoleButton->show();
-        loadJobs(); // Reload to update card buttons
-        QMessageBox::information(this, "Login", "Welcome back!");
+        loadJobs();
+        QMessageBox::information(this, "Welcome", "You are now logged in.");
     });
 
     connect(authManager, &AuthManager::roleSwitched, [this]() {
@@ -80,11 +89,62 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
         loadJobs();
     });
 
+    applyGlobalTheme();
     // Initial Load
     loadJobs();
 }
 
 MainWindow::~MainWindow() = default;
+
+void MainWindow::toggleTheme() {
+    isDarkMode = !isDarkMode;
+    themeButton->setText(isDarkMode ? "☀️" : "🌙");
+    applyGlobalTheme();
+}
+
+void MainWindow::applyGlobalTheme() {
+    QString bgColor = isDarkMode ? "#0f172a" : "#f8fafc";
+    QString barColor = isDarkMode ? "#1e293b" : "#ffffff";
+    QString textColor = isDarkMode ? "#f1f5f9" : "#1e293b";
+    QString borderColor = isDarkMode ? "#334155" : "#e2e8f0";
+    QString primaryBtn = isDarkMode ? "#3b82f6" : "#2563eb";
+
+    QString scrollStyle = QString(
+        "QScrollBar:vertical { border: none; background: %1; width: 10px; margin: 0px; }"
+        "QScrollBar::handle:vertical { background: %2; min-height: 20px; border-radius: 5px; }"
+        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; }"
+        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; }"
+    ).arg(bgColor, isDarkMode ? "#475569" : "#cbd5e1");
+
+    centralWidget->setStyleSheet("background-color: " + bgColor + ";");
+    cardsContainer->setStyleSheet("background-color: " + bgColor + ";");
+    scrollArea->setStyleSheet("background-color: " + bgColor + "; border: none;");
+
+    topBar->setStyleSheet(QString("background-color: %1; border-bottom: 1px solid %2;").arg(barColor, borderColor));
+    logoLabel->setStyleSheet(QString("color: %1; font-size: 24px; font-weight: 800; font-family: 'Segoe UI', sans-serif;").arg(textColor));
+
+    QString iconBtnStyle = QString(
+        "QPushButton { background-color: transparent; color: %1; border-radius: 20px; font-size: 18px; font-weight: bold; }"
+        "QPushButton:hover { background-color: %2; }"
+    ).arg(textColor, isDarkMode ? "#334155" : "#e2e8f0");
+
+    refreshButton->setStyleSheet(iconBtnStyle);
+    themeButton->setStyleSheet(iconBtnStyle);
+
+    QString stdBtnStyle = QString(
+        "QPushButton { background-color: transparent; color: %1; border: 1px solid %2; border-radius: 6px; font-weight: 600; padding: 5px 10px; }"
+        "QPushButton:hover { background-color: %3; }"
+    ).arg(textColor, borderColor, isDarkMode ? "#334155" : "#f1f5f9");
+
+    switchRoleButton->setStyleSheet(stdBtnStyle);
+
+    loginButton->setStyleSheet(QString(
+        "QPushButton { background-color: %1; color: white; border: none; border-radius: 6px; font-weight: 700; }"
+        "QPushButton:hover { opacity: 0.9; }"
+    ).arg(primaryBtn));
+
+    renderJobs();
+}
 
 void MainWindow::loadJobs() {
     // Create Request
@@ -139,6 +199,8 @@ void MainWindow::renderJobs() {
     for (const Job &job: jobsList) {
         auto *card = new JobCard(job, isRecruiter, this);
 
+        card->applyTheme(isDarkMode);
+
         connect(card, &JobCard::applyClicked, this, &MainWindow::onCardApplyClicked);
         connect(card, &JobCard::deleteClicked, this, &MainWindow::onCardDeleteClicked);
 
@@ -172,6 +234,7 @@ void MainWindow::onCardDeleteClicked(long jobId) {
 void MainWindow::openLogin() {
     if (!authManager->isAuthenticated()) {
         LoginDialog dialog(authManager, this);
+        dialog.updateTheme(isDarkMode);
         dialog.exec();
     }
 }
@@ -210,8 +273,8 @@ void MainWindow::onCardApplyClicked(long jobId) {
             QByteArray data = reply->readAll();
             QJsonDocument doc = QJsonDocument::fromJson(data);
             QString msg = "Application failed.";
-            if(doc.isObject() && doc.object().contains("errors")) {
-                 msg = doc.object()["errors"].toArray().at(0).toObject()["message"].toString();
+            if (doc.isObject() && doc.object().contains("errors")) {
+                msg = doc.object()["errors"].toArray().at(0).toObject()["message"].toString();
             }
             QMessageBox::warning(this, "Application Failed", msg);
         }
