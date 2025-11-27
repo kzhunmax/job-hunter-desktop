@@ -14,6 +14,7 @@ public:
     void registerUser(const QString &email, const QString &password, const QString &confirmPassword, const QString &role);
     void switchRole();
     long getResumeId() const;
+    bool isRecruiter() const;
 signals:
     void loginSuccess();
     void loginFailed(QString message);
@@ -24,9 +25,12 @@ private:
     QNetworkAccessManager *networkManager;
     QString accessToken;
     long resumeId = -1;
+    bool m_isRecruiter = false;
+
     const QString BASE_URL = "http://localhost:8080/api";
 
     void fetchUserProfile();
+    QString getErrorMessage(QNetworkReply *reply);
 };
 
 

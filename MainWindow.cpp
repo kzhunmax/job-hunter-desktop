@@ -134,13 +134,11 @@ void MainWindow::renderJobs() {
         delete item;
     }
 
-    // TODO: Get real role from AuthManager later. For now, toggle logic or default false.
-    bool isRecruiter = false;
+    bool isRecruiter = authManager->isRecruiter();
 
     for (const Job &job : jobsList) {
         auto *card = new JobCard(job, isRecruiter, this);
 
-        // Connect card signals to MainWindow slots
         connect(card, &JobCard::applyClicked, this, &MainWindow::onCardApplyClicked);
         connect(card, &JobCard::deleteClicked, this, &MainWindow::onCardDeleteClicked);
 
