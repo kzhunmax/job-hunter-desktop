@@ -42,12 +42,12 @@ QWidget *LoginDialog::createLoginTab() {
         authManager->login(loginEmail->text(), loginPassword->text());
     });
 
-    // Close dialog on success
     connect(authManager, &AuthManager::loginSuccess, this, &QDialog::accept);
 
-    connect(authManager, &AuthManager::loginFailed, [this] {
-        QMessageBox::warning(this, "Warning", "Failed to login");
+    connect(authManager, &AuthManager::loginFailed, [this](QString msg) {
+        QMessageBox::warning(this, "Login Failed", msg);
         loginButton->setEnabled(true);
+        loginButton->setText("Sign In");
     });
     return tab;
 }
@@ -85,11 +85,13 @@ QWidget *LoginDialog::createRegisterTab() {
         authManager->registerUser(regEmail->text(), regPassword->text(), regConfirm->text(), role);
     });
 
-    connect(authManager, &AuthManager::registrationSuccess, this, &QDialog::accept);
-
-    connect(authManager, &AuthManager::registrationFailed, [this] {
-        QMessageBox::warning(this, "Warning", "Failed to register");
-        loginButton->setEnabled(true);
+    connect(authManager, &AuthManager::registrationSuccess, [this]() {
+        QMessageBox::information(this, "Success", "Account created! Please log in.");
+        tabWidget->setCurrentIndex(0);
     });
+    connect(authManager, &AuthManager::registrationFailed, [this, registerButton](QString msg) {
+            QMessageBox::warning(this, "Registration Failed", msg);
+            registerButton->setEnabled(true);
+        });
     return tab;
 }

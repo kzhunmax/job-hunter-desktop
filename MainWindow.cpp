@@ -136,7 +136,7 @@ void MainWindow::renderJobs() {
 
     bool isRecruiter = authManager->isRecruiter();
 
-    for (const Job &job : jobsList) {
+    for (const Job &job: jobsList) {
         auto *card = new JobCard(job, isRecruiter, this);
 
         connect(card, &JobCard::applyClicked, this, &MainWindow::onCardApplyClicked);
@@ -147,8 +147,26 @@ void MainWindow::renderJobs() {
 }
 
 void MainWindow::onCardDeleteClicked(long jobId) {
-    // Implement delete logic similar to apply but using DELETE verb
-    QMessageBox::information(this, "TODO", "Delete implementation coming in next step");
+    QMessageBox::StandardButton reply;
+    reply = QMessageBox::question(this, "Confirm Delete", "Are you sure you want to delete this job?",
+                                  QMessageBox::Yes | QMessageBox::No);
+    if (reply == QMessageBox::No) return;
+
+    QString deleteUrl = QString("%1/%2").arg(API_URL).arg(jobId);
+    QNetworkRequest request((QUrl(deleteUrl)));
+    request.setRawHeader("Authorization", ("Bearer " + authManager->getToken()).toUtf8());
+
+    QNetworkReply *netReply = networkAccessManager->deleteResource(request);
+
+    connect(netReply, &QNetworkReply::finished, [this, netReply]() {
+        if (netReply->error() == QNetworkReply::NoError) {
+            QMessageBox::information(this, "Success", "Job deleted successfully.");
+            loadJobs();
+        } else {
+            QMessageBox::critical(this, "Error", "Failed to delete job: " + netReply->errorString());
+        }
+        netReply->deleteLater();
+    });
 }
 
 void MainWindow::openLogin() {
@@ -160,14 +178,15 @@ void MainWindow::openLogin() {
 
 void MainWindow::onCardApplyClicked(long jobId) {
     if (!authManager->isAuthenticated()) {
-        QMessageBox::information(this, "Login Required", "Please login to apply.");
+        QMessageBox::information(this, "Login Required", "Please login to apply for this position.");
         openLogin();
         return;
     }
 
     long resumeId = authManager->getResumeId();
     if (resumeId == -1) {
-        QMessageBox::warning(this, "Profile Incomplete", "We could not find a resume in your profile. Please upload one via the website.");
+        QMessageBox::warning(this, "Profile Incomplete",
+                             "We could not find a resume in your profile. Please upload one via the website.");
         return;
     }
 
@@ -180,7 +199,7 @@ void MainWindow::onCardApplyClicked(long jobId) {
     // Dynamic Body
     QJsonObject body;
     body["resumeId"] = static_cast<qint64>(resumeId);
-    body["coverLetter"] = "Applied via Desktop App"; // You could add an input dialog for this
+    body["coverLetter"] = "Applied via Desktop App";
 
     QNetworkReply *reply = networkAccessManager->post(request, QJsonDocument(body).toJson());
 
@@ -188,8 +207,13 @@ void MainWindow::onCardApplyClicked(long jobId) {
         if (reply->error() == QNetworkReply::NoError) {
             QMessageBox::information(this, "Success", "Application submitted successfully!");
         } else {
-            // Basic error handling for now
-            QMessageBox::warning(this, "Failed", "Could not apply: " + reply->errorString());
+            QByteArray data = reply->readAll();
+            QJsonDocument doc = QJsonDocument::fromJson(data);
+            QString msg = "Application failed.";
+            if(doc.isObject() && doc.object().contains("errors")) {
+                 msg = doc.object()["errors"].toArray().at(0).toObject()["message"].toString();
+            }
+            QMessageBox::warning(this, "Application Failed", msg);
         }
         reply->deleteLater();
     });

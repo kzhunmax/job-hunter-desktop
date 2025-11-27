@@ -13,8 +13,8 @@ QString AuthManager::getErrorMessage(QNetworkReply *reply) {
     QJsonDocument document = QJsonDocument::fromJson(data);
     if (!document.isNull() && document.isObject()) {
         QJsonObject object = document.object();
-        if (object.contains("error") && object["error"].isArray()) {
-            QJsonArray errors = object["error"].toArray();
+        if (object.contains("errors") && object["errors"].isArray()) {
+            QJsonArray errors = object["errors"].toArray();
             if (!errors.isEmpty()) {
                 return errors.at(0).toObject()["message"].toString();
             }
