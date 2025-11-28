@@ -9,6 +9,7 @@ LoginDialog::LoginDialog(AuthManager *auth, QWidget *parent) : QDialog(parent), 
     setWindowTitle("Access JobHunter");
     setMinimumWidth(400);
     setMaximumWidth(400);
+    toast = new Toast(this);
 
     auto layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
@@ -96,7 +97,7 @@ QWidget *LoginDialog::createLoginTab() {
     connect(authManager, &AuthManager::loginSuccess, this, &QDialog::accept);
 
     connect(authManager, &AuthManager::loginFailed, [this](QString msg) {
-        QMessageBox::warning(this, "Login Failed", msg);
+        toast->showMessage(msg, Toast::Error);
         loginButton->setEnabled(true);
         loginButton->setText("Sign In");
     });
@@ -113,9 +114,14 @@ QWidget *LoginDialog::createRegisterTab() {
     header->setObjectName("header");
     header->setAlignment(Qt::AlignCenter);
 
-    regEmail = new QLineEdit; regEmail->setPlaceholderText("Email");
-    regPassword = new QLineEdit; regPassword->setPlaceholderText("Password"); regPassword->setEchoMode(QLineEdit::Password);
-    regConfirm = new QLineEdit; regConfirm->setPlaceholderText("Confirm Password"); regConfirm->setEchoMode(QLineEdit::Password);
+    regEmail = new QLineEdit;
+    regEmail->setPlaceholderText("Email");
+    regPassword = new QLineEdit;
+    regPassword->setPlaceholderText("Password");
+    regPassword->setEchoMode(QLineEdit::Password);
+    regConfirm = new QLineEdit;
+    regConfirm->setPlaceholderText("Confirm Password");
+    regConfirm->setEchoMode(QLineEdit::Password);
 
     roleCombo = new QComboBox;
     roleCombo->addItem("I am a Candidate", "ROLE_CANDIDATE");
@@ -141,12 +147,12 @@ QWidget *LoginDialog::createRegisterTab() {
     });
 
     connect(authManager, &AuthManager::registrationSuccess, [this]() {
-        QMessageBox::information(this, "Success", "Account created! Please log in.");
+        toast->showMessage("Account created! Please log in.", Toast::Success);
         tabWidget->setCurrentIndex(0);
     });
     connect(authManager, &AuthManager::registrationFailed, [this, registerButton](QString msg) {
-            QMessageBox::warning(this, "Registration Failed", msg);
-            registerButton->setEnabled(true);
-        });
+        toast->showMessage(msg, Toast::Error);
+        registerButton->setEnabled(true);
+    });
     return tab;
 }

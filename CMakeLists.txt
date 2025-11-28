@@ -21,6 +21,8 @@ add_executable(qt
         LoginDialog.h
         JobCard.cpp
         JobCard.h
+        Toast.cpp
+        Toast.h
 )
 target_link_libraries(qt PRIVATE Qt6::Widgets Qt6::Network)
 

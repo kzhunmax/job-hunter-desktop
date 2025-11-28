@@ -14,6 +14,7 @@
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     authManager = new AuthManager(this);
     networkAccessManager = new QNetworkAccessManager(this);
+    toast = new Toast(this);
 
     // 1. Central Widget & Main Layout
     centralWidget = new QWidget(this);
@@ -81,16 +82,15 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
         loginButton->hide();
         switchRoleButton->show();
         loadJobs();
-        QMessageBox::information(this, "Welcome", "You are now logged in.");
+        toast->showMessage("Welcome back!", Toast::Success);
     });
 
     connect(authManager, &AuthManager::roleSwitched, [this]() {
-        QMessageBox::information(this, "Success", "Role Switched!");
+        toast->showMessage("Role switched successfully", Toast::Success);
         loadJobs();
     });
 
     applyGlobalTheme();
-    // Initial Load
     loadJobs();
 }
 
@@ -142,7 +142,7 @@ void MainWindow::applyGlobalTheme() {
         "QPushButton { background-color: %1; color: white; border: none; border-radius: 6px; font-weight: 700; }"
         "QPushButton:hover { opacity: 0.9; }"
     ).arg(primaryBtn));
-
+    if(toast) toast->setParent(this);
     renderJobs();
 }
 
@@ -180,14 +180,13 @@ void MainWindow::loadJobs() {
 
             renderJobs();
         } else {
-            QMessageBox::critical(this, "Error", "Failed to load jobs: " + reply->errorString(), QMessageBox::Ok);
+            toast->showMessage("Failed to load jobs: " + reply->errorString(), Toast::Error);
         }
         reply->deleteLater();
     });
 }
 
 void MainWindow::renderJobs() {
-    // Clear existing cards
     QLayoutItem *item;
     while ((item = cardsLayout->takeAt(0)) != nullptr) {
         if (item->widget()) delete item->widget();
@@ -222,10 +221,10 @@ void MainWindow::onCardDeleteClicked(long jobId) {
 
     connect(netReply, &QNetworkReply::finished, [this, netReply]() {
         if (netReply->error() == QNetworkReply::NoError) {
-            QMessageBox::information(this, "Success", "Job deleted successfully.");
+            toast->showMessage("Job deleted successfully", Toast::Success);
             loadJobs();
         } else {
-            QMessageBox::critical(this, "Error", "Failed to delete job: " + netReply->errorString());
+            toast->showMessage("Failed to delete job " + netReply->errorString(), Toast::Error);
         }
         netReply->deleteLater();
     });
@@ -241,15 +240,14 @@ void MainWindow::openLogin() {
 
 void MainWindow::onCardApplyClicked(long jobId) {
     if (!authManager->isAuthenticated()) {
-        QMessageBox::information(this, "Login Required", "Please login to apply for this position.");
+        toast->showMessage("Please login to apply", Toast::Info);
         openLogin();
         return;
     }
 
     long resumeId = authManager->getResumeId();
     if (resumeId == -1) {
-        QMessageBox::warning(this, "Profile Incomplete",
-                             "We could not find a resume in your profile. Please upload one via the website.");
+        toast->showMessage("We could not find a resume in your profile", Toast::Error);
         return;
     }
 
@@ -268,7 +266,7 @@ void MainWindow::onCardApplyClicked(long jobId) {
 
     connect(reply, &QNetworkReply::finished, [this, reply]() {
         if (reply->error() == QNetworkReply::NoError) {
-            QMessageBox::information(this, "Success", "Application submitted successfully!");
+            toast->showMessage("Application submitted successfully!", Toast::Success);
         } else {
             QByteArray data = reply->readAll();
             QJsonDocument doc = QJsonDocument::fromJson(data);
@@ -276,7 +274,7 @@ void MainWindow::onCardApplyClicked(long jobId) {
             if (doc.isObject() && doc.object().contains("errors")) {
                 msg = doc.object()["errors"].toArray().at(0).toObject()["message"].toString();
             }
-            QMessageBox::warning(this, "Application Failed", msg);
+            toast->showMessage("Application Failed: " + msg, Toast::Error);
         }
         reply->deleteLater();
     });

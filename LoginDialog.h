@@ -28,6 +28,7 @@ private:
     QComboBox *roleCombo;
 
     AuthManager *authManager;
+    Toast *toast;
 
     QWidget* createLoginTab();
     QWidget* createRegisterTab();

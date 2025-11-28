@@ -5,16 +5,16 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QScrollArea>
-#include <QLabel>
 #include <vector>
 #include "AuthManager.h"
 #include "Job.h"
+#include "Toast.h"
 
 class MainWindow : public QMainWindow {
     Q_OBJECT // required Macro for QT signals
 public:
     explicit MainWindow(QWidget *parent = nullptr); // constructor
-    ~MainWindow(); // destructor
+    ~MainWindow() override; // destructor
 private slots:
     void loadJobs(); // trigger by Refresh button
     void openLogin();
@@ -37,6 +37,8 @@ private:
 
     AuthManager *authManager;
     QNetworkAccessManager *networkAccessManager; // handle HTTP requests from Spring backend
+    Toast *toast;
+
     const QString API_URL = "http://localhost:8080/api/jobs";
     const QString APPLICATION_URL = "http://localhost:8080/api/applications";
 
