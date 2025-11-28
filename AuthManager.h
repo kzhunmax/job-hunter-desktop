@@ -29,7 +29,7 @@ private:
 
     const QString BASE_URL = "http://localhost:8080/api";
 
-    void fetchUserProfile();
+    void fetchUserProfile(bool isLoginFlow);
 
     static QString getErrorMessage(QNetworkReply *reply);
 };

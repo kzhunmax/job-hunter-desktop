@@ -39,7 +39,7 @@ void AuthManager::login(const QString &email, const QString &password) {
         if (reply->error() == QNetworkReply::NoError) {
             auto doc = QJsonDocument::fromJson(reply->readAll());
             accessToken = doc.object()["data"].toObject()["accessToken"].toString();
-            fetchUserProfile();
+            fetchUserProfile(true);
         } else {
             emit loginFailed(getErrorMessage(reply));
         }
@@ -47,7 +47,8 @@ void AuthManager::login(const QString &email, const QString &password) {
     });
 }
 
-void AuthManager::registerUser(const QString &email, const QString &password, const QString &confirmPassword, const QString &role) {
+void AuthManager::registerUser(const QString &email, const QString &password, const QString &confirmPassword,
+                               const QString &role) {
     QNetworkRequest request(QUrl(BASE_URL + "/auth/register"));
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
@@ -80,20 +81,20 @@ void AuthManager::switchRole() {
         if (reply->error() == QNetworkReply::NoError) {
             auto doc = QJsonDocument::fromJson(reply->readAll());
             accessToken = doc.object()["data"].toObject()["accessToken"].toString();
-            fetchUserProfile();
+            fetchUserProfile(false);
             emit roleSwitched();
         }
         reply->deleteLater();
     });
 }
 
-void AuthManager::fetchUserProfile() {
+void AuthManager::fetchUserProfile(bool isLoginFlow) {
     QNetworkRequest request(QUrl(BASE_URL + "/user/profile"));
     request.setRawHeader("Authorization", ("Bearer " + accessToken).toUtf8());
 
     QNetworkReply *reply = networkManager->get(request);
 
-    connect(reply, &QNetworkReply::finished, [this, reply] {
+    connect(reply, &QNetworkReply::finished, [this, reply, isLoginFlow] {
         if (reply->error() == QNetworkReply::NoError) {
             auto doc = QJsonDocument::fromJson(reply->readAll());
             QJsonObject data = doc.object()["data"].toObject();
@@ -108,7 +109,9 @@ void AuthManager::fetchUserProfile() {
                 }
             }
         }
-        emit loginSuccess();
+        if (isLoginFlow) {
+            emit loginSuccess();
+        }
         reply->deleteLater();
     });
 }
