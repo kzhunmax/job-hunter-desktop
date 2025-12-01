@@ -7,6 +7,7 @@
 #include <QJsonArray>
 #include <QMessageBox>
 #include <QLabel>
+#include <QUrlQuery>
 
 #include "JobCard.h"
 #include "LoginDialog.h"
@@ -57,6 +58,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     topLayout->addWidget(loginButton);
 
     mainLayout->addWidget(topBar);
+    setupSearchUI(mainLayout);
 
     // 3. Scroll Area for Cards
     scrollArea = new QScrollArea(this);
@@ -78,6 +80,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     connect(switchRoleButton, &QPushButton::clicked, this, &MainWindow::switchRole);
     connect(themeButton, &QPushButton::clicked, this, &MainWindow::toggleTheme);
 
+    connect(searchButton, &QPushButton::clicked, this, &MainWindow::searchJobs);
+    connect(searchQueryInput, &QLineEdit::returnPressed, this, &MainWindow::searchJobs);
+    connect(searchLocationInput, &QLineEdit::returnPressed, this, &MainWindow::searchJobs);
+
     connect(authManager, &AuthManager::loginSuccess, [this]() {
         loginButton->hide();
         switchRoleButton->show();
@@ -95,6 +101,84 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 }
 
 MainWindow::~MainWindow() = default;
+
+void MainWindow::setupSearchUI(QVBoxLayout *mainLayout) {
+    searchContainer = new QWidget;
+    auto *layout = new QHBoxLayout(searchContainer);
+    layout->setContentsMargins(30, 20, 30, 10);
+    layout->setSpacing(10);
+
+    searchQueryInput = new QLineEdit;
+    searchQueryInput->setPlaceholderText("🔍 Job title, keywords, or company");
+    searchQueryInput->setFixedHeight(40);
+
+    searchLocationInput = new QLineEdit;
+    searchLocationInput->setPlaceholderText("📍 City, State, or Remote");
+    searchLocationInput->setFixedHeight(40);
+    searchLocationInput->setFixedWidth(200);
+
+    searchButton = new QPushButton("Search");
+    searchButton->setCursor(Qt::PointingHandCursor);
+    searchButton->setFixedSize(100, 40);
+
+    layout->addWidget(searchQueryInput);
+    layout->addWidget(searchLocationInput);
+    layout->addWidget(searchButton);
+
+    mainLayout->addWidget(searchContainer);
+}
+
+void MainWindow::searchJobs() {
+    QString query = searchQueryInput->text().trimmed();
+    QString location = searchLocationInput->text().trimmed();
+
+    // If inputs are empty, revert to standard load
+    if (query.isEmpty() && location.isEmpty()) {
+        loadJobs();
+        return;
+    }
+
+    // Build Search URL
+    QUrl url(API_URL + "/search");
+    QUrlQuery queryParams;
+    if (!query.isEmpty()) queryParams.addQueryItem("query", query);
+    if (!location.isEmpty()) queryParams.addQueryItem("location", location);
+    url.setQuery(queryParams);
+
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    if(authManager->isAuthenticated()) {
+        request.setRawHeader("Authorization", ("Bearer " + authManager->getToken()).toUtf8());
+    }
+
+    QNetworkReply *reply = networkAccessManager->get(request);
+
+    connect(reply, &QNetworkReply::finished, [this, reply]() {
+        if (reply->error() == QNetworkReply::NoError) {
+            QByteArray responseData = reply->readAll();
+            QJsonDocument doc = QJsonDocument::fromJson(responseData);
+
+            QJsonArray jsonJobs = doc.object()["data"].toObject()["content"].toArray();
+            jobsList.clear();
+
+            for (const auto &item: jsonJobs) {
+                QJsonObject jsonObj = item.toObject();
+                Job job(
+                    static_cast<long>(jsonObj["id"].toDouble()),
+                    jsonObj["title"].toString(),
+                    jsonObj["company"].toString(),
+                    jsonObj["salary"].toDouble()
+                );
+                jobsList.push_back(job);
+            }
+            renderJobs();
+            toast->showMessage(QString("Found %1 jobs").arg(jobsList.size()), Toast::Success);
+        } else {
+            toast->showMessage("Search failed: " + reply->errorString(), Toast::Error);
+        }
+        reply->deleteLater();
+    });
+}
 
 void MainWindow::toggleTheme() {
     isDarkMode = !isDarkMode;
@@ -142,6 +226,22 @@ void MainWindow::applyGlobalTheme() {
         "QPushButton { background-color: %1; color: white; border: none; border-radius: 6px; font-weight: 700; }"
         "QPushButton:hover { opacity: 0.9; }"
     ).arg(primaryBtn));
+
+    QString inputStyle = QString(
+        "QLineEdit { border: 1px solid %1; border-radius: 8px; padding: 0 12px; background: %2; color: %3; font-size: 14px; }"
+        "QLineEdit:focus { border: 2px solid #3b82f6; }"
+    ).arg(isDarkMode ? "#334155" : "#cbd5e1",
+          isDarkMode ? "#1e293b" : "#ffffff",
+          isDarkMode ? "#f1f5f9" : "#1e293b");
+
+    searchQueryInput->setStyleSheet(inputStyle);
+    searchLocationInput->setStyleSheet(inputStyle);
+
+    searchButton->setStyleSheet(
+        "QPushButton { background-color: #3b82f6; color: white; border-radius: 8px; font-weight: bold; font-size: 14px; }"
+        "QPushButton:hover { background-color: #2563eb; }"
+    );
+
     if(toast) toast->setParent(this);
     renderJobs();
 }

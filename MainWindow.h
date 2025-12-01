@@ -5,6 +5,7 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QScrollArea>
+#include <QLineEdit>
 #include <vector>
 #include "AuthManager.h"
 #include "Job.h"
@@ -17,6 +18,7 @@ public:
     ~MainWindow() override; // destructor
 private slots:
     void loadJobs(); // trigger by Refresh button
+    void searchJobs();
     void openLogin();
     void switchRole();
     void toggleTheme();
@@ -35,6 +37,11 @@ private:
     QPushButton *switchRoleButton;
     QPushButton *themeButton;
 
+    QWidget *searchContainer;
+    QLineEdit *searchQueryInput;
+    QLineEdit *searchLocationInput;
+    QPushButton *searchButton;
+
     AuthManager *authManager;
     QNetworkAccessManager *networkAccessManager; // handle HTTP requests from Spring backend
     Toast *toast;
@@ -47,6 +54,7 @@ private:
 
     void renderJobs();
     void applyGlobalTheme();
+    void setupSearchUI(QVBoxLayout *mainLayout);
 };
 
 #endif //MAINWINDOW_H
